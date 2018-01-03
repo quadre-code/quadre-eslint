@@ -45,11 +45,11 @@ or only disable warnings icons:
 }
 ```
 
-To force the extension to use its own local version of ESLint:
+To force the extension to use its own version of ESLint:
 
 ```JSON
 {
-  "quadre-eslint.useLocalESLint": true
+  "quadre-eslint.useEmbeddedESLint": true
 }
 ```
 

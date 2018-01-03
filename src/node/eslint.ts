@@ -74,9 +74,9 @@ function getEslintVersion(eslintPath: string): string {
   return require(eslintPath + '/package.json').version;
 }
 
-export function refreshEslintCli(eslintPath: string | null, opts: ESLintOptions, allowLocalEslint: boolean) {
+export function refreshEslintCli(eslintPath: string | null, opts: ESLintOptions, allowEmbeddedEslint: boolean) {
   if (eslintPath == null) {
-    if (allowLocalEslint) {
+    if (allowEmbeddedEslint) {
       eslintPath = 'eslint';
     } else {
       currentVersion = null;
@@ -112,7 +112,7 @@ function nodeModulesInDir(dirPath: string) {
   return path.resolve(normalizeDir(dirPath), 'node_modules');
 }
 
-export function setProjectRoot(projectRoot: string | null, prevProjectRoot: string | null, useLocalESLint: boolean) {
+export function setProjectRoot(projectRoot: string | null, prevProjectRoot: string | null, useEmbeddedESLint: boolean) {
   // refresh when called without arguments
   if (!projectRoot) { projectRoot = currentProjectRoot; }
 
@@ -120,7 +120,7 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
   let eslintPath: string | null = null;
   let rulesDirPath: string;
   let ignorePath: string;
-  let allowLocalEslint: boolean = true;
+  let allowEmbeddedEslint: boolean = true;
 
   if (projectRoot) {
     // this is critical for correct .eslintrc resolution
@@ -139,9 +139,9 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
       opts.baseConfig = { extends: 'eslint:recommended' };
     }
 
-    // only allow use of local eslint when no configuration is present in the project
-    // or when the useLocalESLint preference is set to true
-    allowLocalEslint = !currentProjectRootHasConfig || useLocalESLint;
+    // only allow use of embedded eslint when no configuration is present in the project
+    // or when the useEmbeddedESLint preference is set to true
+    allowEmbeddedEslint = !currentProjectRootHasConfig || useEmbeddedESLint;
 
     eslintPath = projectRoot + 'node_modules/eslint';
     try {
@@ -199,7 +199,7 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
   require('module').Module._initPaths();
 
   // console.log('ESLint NODE_PATH', process.env.NODE_PATH);
-  refreshEslintCli(eslintPath, opts, allowLocalEslint);
+  refreshEslintCli(eslintPath, opts, allowEmbeddedEslint);
 }
 
 function mapEslintMessage(result: any, majorVersion: number): CodeInspectionResult {
@@ -256,7 +256,7 @@ function createUserError(message: string): CodeInspectionReport {
 }
 
 export function lintFile(
-  projectRoot: string, fullPath: string, text: string, useLocalESLint: boolean,
+  projectRoot: string, fullPath: string, text: string, useEmbeddedESLint: boolean,
   callback: (err: Error | null, res?: CodeInspectionReport) => void
 ) {
   if (isOldNode && currentVersion && /^3/.test(currentVersion)) {
@@ -267,7 +267,7 @@ export function lintFile(
   }
   if (erroredLastTime || projectRoot !== currentProjectRoot) {
     try {
-      setProjectRoot(projectRoot, currentProjectRoot, useLocalESLint);
+      setProjectRoot(projectRoot, currentProjectRoot, useEmbeddedESLint);
       currentProjectRoot = projectRoot;
       erroredLastTime = false;
     } catch (err) {
