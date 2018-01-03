@@ -12,9 +12,8 @@ define((require, exports, module) => {
   const DocumentManager = brackets.getModule('document/DocumentManager');
   const EditorManager = brackets.getModule('editor/EditorManager');
   const PreferencesManager = brackets.getModule('preferences/PreferencesManager');
-  const EXTENSION_NAME = 'brackets-eslint';
-  const EXTENSION_UNIQUE_NAME = 'zaggino.' + EXTENSION_NAME;
-  const AUTOFIX_COMMAND_ID = EXTENSION_UNIQUE_NAME + '.autofix';
+  const EXTENSION_NAME = 'quadre-eslint';
+  const AUTOFIX_COMMAND_ID = EXTENSION_NAME + '.autofix';
   const AUTOFIX_COMMAND_NAME = 'Auto-fix with ESLint';
   const log = require('./log');
 
@@ -30,7 +29,7 @@ define((require, exports, module) => {
 
   // Constants
   const LINTER_NAME = 'ESLint';
-  const nodeDomain = new NodeDomain(EXTENSION_UNIQUE_NAME, ExtensionUtils.getModulePath(module, './node/domain'));
+  const nodeDomain = new NodeDomain(EXTENSION_NAME, ExtensionUtils.getModulePath(module, './node/domain'));
 
   function handleLintSync(text: string, fullPath: string): never {
     throw new Error('ESLint sync is not available, use async for ' + fullPath);
@@ -46,7 +45,7 @@ define((require, exports, module) => {
         const w = (<any> window);
         if (w.bracketsInspectionGutters) {
           w.bracketsInspectionGutters.set(
-            EXTENSION_UNIQUE_NAME, fullPath, report, preferences.get('gutterMarks', projectRoot)
+            EXTENSION_NAME, fullPath, report, preferences.get('gutterMarks', projectRoot)
           );
         } else {
           log.error(`No bracketsInspectionGutters found on window, gutters disabled.`);

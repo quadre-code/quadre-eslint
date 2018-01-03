@@ -1,17 +1,11 @@
-# ESLint [![Build Status](https://travis-ci.org/brackets-userland/brackets-eslint.svg?branch=master)](https://travis-ci.org/brackets-userland/brackets-eslint)
+# ESLint [![Build Status](https://travis-ci.org/quadre-code/quadre-eslint.svg?branch=master)](https://travis-ci.org/quadre-code/quadre-eslint)
 
-> **Heads up!** Beginning with version 1.11, Brackets now includes a prepackaged version of ESLint. If you want to get the possible benefits of the standalone `brackets-eslint` such as a faster release cycle, you might have to uninstall the default extension first via Extension Manager -> Installed -> ESLint (and vice versa if you want to use the prepackaged one).
-
-Brackets extension which provides file linting with ESLint.
+Quadre extension which provides file linting with ESLint.
 
 Uses CLIEngine from [https://www.npmjs.com/package/eslint](https://www.npmjs.com/package/eslint)
 which should provide same results as linting in the command line (respecting all .eslintrc files)
 
 Includes support for [custom parsers and plugins](#custom-parsers-and-plugins).
-
-## How to install
-
-Use [brackets-npm-registry](https://github.com/brackets-userland/brackets-npm-registry)
 
 ## How to configure
 
@@ -39,7 +33,7 @@ To disable the both warning and error icons in the gutter you can configure the 
 
 ```JSON
 {
-  "brackets-eslint.gutterMarks": false
+  "quadre-eslint.gutterMarks": false
 }
 ```
 
@@ -47,7 +41,7 @@ or only disable warnings icons:
 
 ```JSON
 {
-  "brackets-eslint.gutterMarks": { "error": true, "warning" : false }
+  "quadre-eslint.gutterMarks": { "error": true, "warning" : false }
 }
 ```
 
@@ -55,7 +49,7 @@ To force the extension to use its own local version of ESLint:
 
 ```JSON
 {
-  "brackets-eslint.useLocalESLint": true
+  "quadre-eslint.useLocalESLint": true
 }
 ```
 
@@ -63,8 +57,8 @@ To force the extension to use its own local version of ESLint:
 
 clone:
 ```
-https://github.com/brackets-userland/brackets-eslint
-cd brackets-eslint
+https://github.com/quadre-code/quadre-eslint
+cd quadre-eslint
 ```
 
 get latest version from origin (discarding local changes):
@@ -86,11 +80,3 @@ git push
 git push --tags
 npm publish
 ```
-
-pack all except `.git` and `node_modules` folders into a zip file and upload to brackets-registry
-one thing here - someone's blocking 'brackets-eslint' name so I rename the name of the extension to:
-```
-"name": "zaggino.brackets-eslint",
-```
-before zipping in package.json, maybe ask registry maintainers to look into this
-after zipping just do `git reset --hard` to revert again

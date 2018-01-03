@@ -1,5 +1,5 @@
 {
-  "name": "brackets-eslint",
+  "name": "quadre-eslint",
   "version": "3.2.0",
   "engines": {
     "brackets": ">=1.9.0"
@@ -13,8 +13,8 @@
     "linting",
     "linter"
   ],
-  "homepage": "https://github.com/brackets-userland/brackets-eslint",
-  "bugs": "https://github.com/brackets-userland/brackets-eslint/issues",
+  "homepage": "https://github.com/quadre-code/quadre-eslint",
+  "bugs": "https://github.com/quadre-code/quadre-eslint/issues",
   "license": "MIT",
   "author": {
     "name": "Martin Zagora",
@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/brackets-userland/brackets-eslint.git"
+    "url": "https://github.com/quadre-code/quadre-eslint.git"
   },
   "scripts": {
     "dev": "tsc --watch",
