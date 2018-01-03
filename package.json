@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "brackets-inspection-gutters": "^0.2.10",
-    "eslint": "^3.16.1"
+    "eslint": "^4.14.0"
   },
   "devDependencies": {
     "@types/jquery": "2.0.40",
