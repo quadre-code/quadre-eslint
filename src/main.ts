@@ -42,7 +42,7 @@ define((require, exports, module) => {
     nodeDomain.exec('lintFile', projectRoot, fullPath, text, useLocalESLint)
       .then((report: CodeInspectionReport) => {
         // set gutter marks using brackets-inspection-gutters module
-        const w = (<any> window);
+        const w = (window as any);
         if (w.bracketsInspectionGutters) {
           w.bracketsInspectionGutters.set(
             EXTENSION_NAME, fullPath, report, preferences.get('gutterMarks', projectRoot)

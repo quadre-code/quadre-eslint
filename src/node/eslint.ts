@@ -11,11 +11,11 @@ export interface ESLintOptions {
   rulePaths?: string[];
   ignore?: boolean;
   ignorePath?: string;
-  baseConfig?: Object;
+  baseConfig?: object;
 }
 
 export interface ESLintCLIEngine {
-  executeOnText: Function;
+  executeOnText: (text: string, filename: string) => any;
   options: {
     fix: boolean;
   };
@@ -175,11 +175,12 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
   }
 
   // make sure plugins are loadable from current project directory
-  let nodePaths = process.env.NODE_PATH ? process.env.NODE_PATH.split(path.delimiter) : [];
+  const nodePath = process.env.NODE_PATH;
+  let nodePaths = nodePath ? nodePath.split(path.delimiter) : [];
 
   // remove previous from NODE_PATH
   if (prevProjectRoot) {
-    let io = nodePaths.indexOf(nodeModulesInDir(prevProjectRoot));
+    const io = nodePaths.indexOf(nodeModulesInDir(prevProjectRoot));
     if (io !== -1) {
       nodePaths.splice(io, 1);
     }
