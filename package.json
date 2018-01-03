@@ -26,11 +26,12 @@
     "url": "https://github.com/quadre-code/quadre-eslint.git"
   },
   "scripts": {
-    "dev": "tsc --watch",
+    "dev": "concurrently --kill-others \"tsc --watch --project tsconfig.json\" \"tsc --watch --project src/node/tsconfig.json\"",
     "test": "npm run prepublish",
     "prepublish": "npm prune && npm update && npm run build && npm run lint",
-    "build": "rimraf ./dist && tsc",
-    "lint": "tslint -c tslint.json --project tsconfig.json"
+    "build": "rimraf ./dist && npm run tsc",
+    "lint": "tslint -c tslint.json --project tsconfig.json && tslint -c tslint.json --project src/node/tsconfig.json",
+    "tsc": "tsc --project tsconfig.json && tsc --project src/node/tsconfig.json"
   },
   "dependencies": {
     "brackets-inspection-gutters": "^0.2.10",
@@ -39,6 +40,7 @@
   "devDependencies": {
     "@types/jquery": "2.0.40",
     "@types/node": "8.5.2",
+    "concurrently": "3.5.1",
     "rimraf": "2.6.2",
     "tslint": "5.8.0",
     "typescript": "2.6.2"
