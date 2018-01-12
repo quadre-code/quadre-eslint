@@ -1,4 +1,8 @@
-export type CodeInspectionResultType = 'problem_type_error' | 'problem_type_warning' | 'problem_type_meta';
+export enum CodeInspectionResultType {
+  ERROR = 'problem_type_error',
+  WARNING = 'problem_type_warning',
+  META = 'problem_type_meta'
+}
 
 export interface CodeInspectionPosition {
   line: number;
