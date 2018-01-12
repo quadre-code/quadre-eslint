@@ -12,6 +12,7 @@ const Menus = brackets.getModule('command/Menus');
 const DocumentManager = brackets.getModule('document/DocumentManager');
 const EditorManager = brackets.getModule('editor/EditorManager');
 const PreferencesManager = brackets.getModule('preferences/PreferencesManager');
+const FileSystem = brackets.getModule('filesystem/FileSystem');
 const EXTENSION_NAME = 'quadre-eslint';
 const AUTOFIX_COMMAND_ID = EXTENSION_NAME + '.autofix';
 const AUTOFIX_COMMAND_NAME = 'Auto-fix with ESLint';
@@ -100,6 +101,14 @@ editMenu.addMenuItem(AUTOFIX_COMMAND_ID);
 // Add context-menu option (only for Javascript files)
 const contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 contextMenu.addMenuItem(AUTOFIX_COMMAND_ID);
+
+FileSystem.on('change', (evt, file) => {
+  if (/^\.eslintrc(\.(js|yaml|yml|json))?$/.test(file.name)) {
+    const projectRoot = ProjectManager.getProjectRoot().fullPath;
+    const useEmbeddedESLint = preferences.get('useEmbeddedESLint');
+    nodeDomain.exec('configFileModified', projectRoot, useEmbeddedESLint);
+  }
+});
 
 // register a linter with CodeInspection
 ['javascript', 'jsx', 'typescript', 'tsx', 'vue'].forEach((langId) => {

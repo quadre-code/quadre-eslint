@@ -29,9 +29,6 @@ const isOldNode = /^0/.test(nodeVersion);
 const defaultCwd = process.cwd();
 const ESLINT_SEVERITY_ERROR = 2;
 const ESLINT_SEVERITY_WARNING = 1;
-const BRACKETS_TYPE_ERROR = 'problem_type_error';
-const BRACKETS_TYPE_WARNING = 'problem_type_warning';
-const BRACKETS_TYPE_META = 'problem_type_meta';
 
 let cli: ESLintCLIEngine | null = null;
 let currentVersion: string | null = null;
@@ -210,15 +207,15 @@ function mapEslintMessage(result: any, majorVersion: number): CodeInspectionResu
   switch (result.severity) {
     case ESLINT_SEVERITY_ERROR:
       message = 'ERROR: ';
-      type = BRACKETS_TYPE_ERROR as CodeInspectionResultType;
+      type = CodeInspectionResultType.ERROR;
       break;
     case ESLINT_SEVERITY_WARNING:
       message = 'WARNING: ';
-      type = BRACKETS_TYPE_WARNING as CodeInspectionResultType;
+      type = CodeInspectionResultType.WARNING;
       break;
     default:
       message = 'UNKNOWN: ';
-      type = BRACKETS_TYPE_META as CodeInspectionResultType;
+      type = CodeInspectionResultType.META;
   }
 
   message += result.message;
@@ -248,7 +245,7 @@ function createUserError(message: string): CodeInspectionReport {
   erroredLastTime = true;
   return {
     errors: [{
-      type: 'problem_type_error',
+      type: CodeInspectionResultType.ERROR,
       message,
       pos: { line: 0, ch: 0 }
     }]
@@ -322,4 +319,9 @@ export function fixFile(
     cli.options.fix = false;
   }
   callback(err, res);
+}
+
+export function configFileModified(projectRoot, useEmbeddedESLint) {
+  setProjectRoot(projectRoot, null, useEmbeddedESLint);
+  currentProjectRoot = projectRoot;
 }
