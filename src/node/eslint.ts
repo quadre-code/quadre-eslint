@@ -320,3 +320,8 @@ export function fixFile(
   }
   callback(err, res);
 }
+
+export function configFileModified(projectRoot, useEmbeddedESLint) {
+  setProjectRoot(projectRoot, null, useEmbeddedESLint);
+  currentProjectRoot = projectRoot;
+}

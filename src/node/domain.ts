@@ -41,4 +41,18 @@ exports.init = (_domainManager: any) => {
     ]
   );
 
+  domainManager.registerCommand(
+    domainName,
+    'configFileModified',
+    esLint.configFileModified,
+    false,
+    'notify that config file was modified',
+    [
+        { name: 'projectRoot', type: 'string' }
+    ],
+    [
+        { name: 'result', type: 'boolean' }
+    ]
+  );
+
 };
