@@ -34,8 +34,8 @@
     "tsc": "tsc --project tsconfig.json && tsc --project src/node/tsconfig.json"
   },
   "dependencies": {
-    "brackets-inspection-gutters": "^0.2.10",
-    "eslint": "^4.15.0"
+    "brackets-inspection-gutters": "0.2.10",
+    "eslint": "4.15.0"
   },
   "devDependencies": {
     "@types/jquery": "2.0.40",
