@@ -102,8 +102,8 @@ editMenu.addMenuItem(AUTOFIX_COMMAND_ID);
 const contextMenu = Menus.getContextMenu(Menus.ContextMenuIds.EDITOR_MENU);
 contextMenu.addMenuItem(AUTOFIX_COMMAND_ID);
 
-FileSystem.on('change', (evt, file) => {
-  if (/^\.eslintrc(\.(js|yaml|yml|json))?$/.test(file.name)) {
+FileSystem.on('change', (event, entry) => {
+  if (!entry || /^\.eslintrc(\.(js|yaml|yml|json))?$/.test(entry.name)) {
     const projectRoot = ProjectManager.getProjectRoot().fullPath;
     const useEmbeddedESLint = preferences.get('useEmbeddedESLint');
     nodeDomain.exec('configFileModified', projectRoot, useEmbeddedESLint);
