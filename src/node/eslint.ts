@@ -1,11 +1,5 @@
 import { CodeInspectionReport, CodeInspectionResult, CodeInspectionResultType } from '../types';
 
-export interface ESLint {
-  CLIEngine: {
-    new(opts: ESLintOptions): ESLintCLIEngine;
-  };
-}
-
 export interface ESLintOptions {
   cwd?: string;
   rulePaths?: string[];
@@ -19,6 +13,12 @@ export interface ESLintCLIEngine {
   options: {
     fix: boolean;
   };
+}
+
+type CLIEngine = new(opts: ESLintOptions) => ESLintCLIEngine;
+
+export interface ESLint {
+  CLIEngine: CLIEngine;
 }
 
 const EXTENSION_NAME = 'quadre-eslint';

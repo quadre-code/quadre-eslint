@@ -70,7 +70,7 @@ function handleAutoFix() {
   const scroll = editor.getScrollPos();
 
   // Do nothing unless it's a file with a supported language.
-    if (supportedLanguageIds.indexOf(fileType) === -1) {
+  if (supportedLanguageIds.indexOf(fileType) === -1) {
     return;
   }
 
