@@ -18,6 +18,8 @@ const AUTOFIX_COMMAND_ID = EXTENSION_NAME + '.autofix';
 const AUTOFIX_COMMAND_NAME = 'Auto-fix with ESLint';
 import * as log from './log';
 
+const supportedLanguageIds = ['javascript', 'jsx', 'typescript', 'tsx', 'vue'];
+
 // Load extension modules that are not included by core
 const preferences = PreferencesManager.getExtensionPrefs(EXTENSION_NAME);
 
@@ -61,14 +63,14 @@ function handleLintAsync(text: string, fullPath: string): JQueryPromise<CodeInsp
 function handleAutoFix() {
   const doc = DocumentManager.getCurrentDocument();
   const language = doc.getLanguage();
-  const fileType = language._id;
+  const fileType = language.getId();
   const fullPath = doc.file.fullPath;
   const editor = EditorManager.getCurrentFullEditor();
   const cursor = editor.getCursorPos();
   const scroll = editor.getScrollPos();
 
-  // Do nothing unless it's a Javascript file
-  if (fileType !== 'javascript') {
+  // Do nothing unless it's a file with a supported language.
+    if (supportedLanguageIds.indexOf(fileType) === -1) {
     return;
   }
 
@@ -111,7 +113,7 @@ FileSystem.on('change', (event, entry) => {
 });
 
 // register a linter with CodeInspection
-['javascript', 'jsx', 'typescript', 'tsx', 'vue'].forEach((langId) => {
+supportedLanguageIds.forEach((langId) => {
   CodeInspection.register(langId, {
     name: LINTER_NAME,
     scanFile: handleLintSync,
