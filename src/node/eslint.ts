@@ -1,24 +1,8 @@
+import { CLIEngine } from 'eslint';
 import { CodeInspectionReport, CodeInspectionResult, CodeInspectionResultType } from '../types';
 
-export interface ESLintOptions {
-  cwd?: string;
-  rulePaths?: string[];
-  ignore?: boolean;
-  ignorePath?: string;
-  baseConfig?: object;
-}
-
-export interface ESLintCLIEngine {
-  executeOnText: (text: string, filename: string) => any;
-  options: {
-    fix: boolean;
-  };
-}
-
-type CLIEngine = new(opts: ESLintOptions) => ESLintCLIEngine;
-
-export interface ESLint {
-  CLIEngine: CLIEngine;
+export interface ESLintModule {
+  CLIEngine: typeof CLIEngine;
 }
 
 const EXTENSION_NAME = 'quadre-eslint';
@@ -30,7 +14,7 @@ const defaultCwd = process.cwd();
 const ESLINT_SEVERITY_ERROR = 2;
 const ESLINT_SEVERITY_WARNING = 1;
 
-let cli: ESLintCLIEngine | null = null;
+let cli: CLIEngine | null = null;
 let currentVersion: string | null = null;
 let currentProjectRoot: string | null = null;
 let currentProjectRootHasConfig: boolean = false;
@@ -42,7 +26,7 @@ const log = {
   error: (...args: any[]) => console.error('[' + EXTENSION_NAME + ']', ...args)
 };
 
-function getCli(eslintPath: string, opts: ESLintOptions): ESLintCLIEngine | null {
+function getCli(eslintPath: string, opts: CLIEngine.Options): CLIEngine | null {
   let _realPath: string;
   try {
     _realPath = require.resolve(eslintPath);
@@ -51,7 +35,7 @@ function getCli(eslintPath: string, opts: ESLintOptions): ESLintCLIEngine | null
     return null;
   }
 
-  let _eslint: ESLint;
+  let _eslint: ESLintModule;
   try {
     _eslint = require(eslintPath);
   } catch (err) {
@@ -71,7 +55,7 @@ function getEslintVersion(eslintPath: string): string {
   return require(eslintPath + '/package.json').version;
 }
 
-export function refreshEslintCli(eslintPath: string | null, opts: ESLintOptions, allowEmbeddedEslint: boolean) {
+export function refreshEslintCli(eslintPath: string | null, opts: CLIEngine.Options, allowEmbeddedEslint: boolean) {
   if (eslintPath == null) {
     if (allowEmbeddedEslint) {
       eslintPath = 'eslint';
@@ -113,7 +97,7 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
   // refresh when called without arguments
   if (!projectRoot) { projectRoot = currentProjectRoot; }
 
-  const opts: ESLintOptions = {};
+  const opts: CLIEngine.Options = {};
   let eslintPath: string | null = null;
   let rulesDirPath: string;
   let ignorePath: string;
@@ -307,7 +291,7 @@ export function fixFile(
   }
   let res: any;
   let err: Error | null = null;
-  cli.options.fix = true;
+  (cli as any).options.fix = true;
   try {
     process.chdir(projectRoot);
     res = cli.executeOnText(text, fullPath);
@@ -316,7 +300,7 @@ export function fixFile(
     log.error(e.stack);
     err = e;
   } finally {
-    cli.options.fix = false;
+    (cli as any).options.fix = false;
   }
   callback(err, res);
 }
