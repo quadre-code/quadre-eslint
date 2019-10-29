@@ -8,14 +8,11 @@ export interface ESLintModule {
 const EXTENSION_NAME = 'quadre-eslint';
 const fs = require('fs');
 const path = require('path');
-const nodeVersion = process.versions.node;
-const isOldNode = /^0/.test(nodeVersion);
 const defaultCwd = process.cwd();
 const ESLINT_SEVERITY_ERROR = 2;
 const ESLINT_SEVERITY_WARNING = 1;
 
 let cli: CLIEngine | null = null;
-let currentVersion: string | null = null;
 let currentProjectRoot: string | null = null;
 let currentProjectRootHasConfig: boolean = false;
 let erroredLastTime: boolean = true;
@@ -51,22 +48,16 @@ function getCli(eslintPath: string, opts: CLIEngine.Options): CLIEngine | null {
   return new _eslint.CLIEngine(opts);
 }
 
-function getEslintVersion(eslintPath: string): string {
-  return require(eslintPath + '/package.json').version;
-}
-
 export function refreshEslintCli(eslintPath: string | null, opts: CLIEngine.Options, allowEmbeddedEslint: boolean) {
   if (eslintPath == null) {
     if (allowEmbeddedEslint) {
       eslintPath = 'eslint';
     } else {
-      currentVersion = null;
       cli = null;
       return;
     }
   }
   try {
-    currentVersion = getEslintVersion(eslintPath);
     cli = getCli(eslintPath, opts);
   } catch (err) {
     log.error(err);
@@ -240,12 +231,6 @@ export function lintFile(
   projectRoot: string, fullPath: string, text: string, useEmbeddedESLint: boolean,
   callback: (err: Error | null, res?: CodeInspectionReport) => void
 ) {
-  if (isOldNode && currentVersion && /^3/.test(currentVersion)) {
-    return callback(null, createUserError(
-      `ESLintError: Legacy node process detected (${nodeVersion}), ` +
-      `please update to Brackets 1.8 or Brackets-Electron to support ESLint ${currentVersion}`
-    ));
-  }
   if (erroredLastTime || projectRoot !== currentProjectRoot) {
     try {
       setProjectRoot(projectRoot, currentProjectRoot, useEmbeddedESLint);
@@ -274,7 +259,7 @@ export function lintFile(
   let err: Error | null = null;
   try {
     res = cli.executeOnText(text, relativePath);
-    res.eslintVersion = currentVersion;
+    res.eslintVersion = cli.version;
   } catch (e) {
     log.error(`Error thrown in executeOnText: ${e.stack}`);
     err = e;
@@ -295,7 +280,7 @@ export function fixFile(
   try {
     process.chdir(projectRoot);
     res = cli.executeOnText(text, fullPath);
-    res.eslintVersion = currentVersion;
+    res.eslintVersion = cli.version;
   } catch (e) {
     log.error(e.stack);
     err = e;
