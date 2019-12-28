@@ -28,13 +28,21 @@ define(function (require, exports, module) {
     "use strict";
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils"),
-        FileUtils       = brackets.getModule("file/FileUtils");
+        FileUtils       = brackets.getModule("file/FileUtils"),
+        Commands       = brackets.getModule("command/Commands");
+
+    const EXTENSION_NAME = "quadre-eslint";
+    const AUTOFIX_COMMAND_ID = EXTENSION_NAME + ".autofix";
 
     describe("ESLint", function () {
         var testFolder = FileUtils.getNativeModuleDirectoryPath(module) + "/unittest-files/",
             testWindow,
             $,
-            CodeInspection;
+            CodeInspection,
+            CommandManager,
+            EditorManager,
+            myEditor,
+            myDocument;
 
         var toggleESLintResults = function (visible) {
             $("#status-inspection").triggerHandler("click");
@@ -49,6 +57,8 @@ define(function (require, exports, module) {
                     $ = testWindow.$;
                     CodeInspection = testWindow.brackets.test.CodeInspection;
                     CodeInspection.toggleEnabled(true);
+                    CommandManager = testWindow.brackets.test.CommandManager;
+                    EditorManager = testWindow.brackets.test.EditorManager;
                 });
             });
 
@@ -58,8 +68,11 @@ define(function (require, exports, module) {
         });
 
         afterEach(function () {
-            testWindow    = null;
+            EditorManager = null;
+            CommandManager = null;
+            CodeInspection = null;
             $             = null;
+            testWindow    = null;
             SpecRunnerUtils.closeTestWindow();
         });
 
@@ -105,5 +118,34 @@ define(function (require, exports, module) {
                 toggleESLintResults(false);
             });
         });
+
+        describe("autofix command", function () {
+            afterEach(function () {
+                runs(function () {
+                    waitsForDone(CommandManager.execute(Commands.FILE_CLOSE, { _forceClose: true }));
+                });
+            });
+
+            it("should fix autofixable recommended errors", function () {
+                runs(function () {
+                    waitsForDone(SpecRunnerUtils.openProjectFiles(["fix-before.js"]), "open test file");
+                });
+
+                runs(function () {
+                    myEditor = EditorManager.getCurrentFullEditor();
+                    myDocument = myEditor.document;
+                });
+
+                runs(function () {
+                    waitsForDone(CommandManager.execute(AUTOFIX_COMMAND_ID));
+                });
+
+                runs(function () {
+                    expect(myDocument.getText()).toEqual("var x = 5;\n");
+                    myEditor = null;
+                    myDocument = null;
+                })
+            })
+        })
     });
 });

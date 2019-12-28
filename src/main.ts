@@ -75,7 +75,8 @@ function handleAutoFix() {
   }
 
   const projectRoot = ProjectManager.getProjectRoot().fullPath;
-  nodeDomain.exec('fixFile', projectRoot, fullPath, doc.getText())
+  const useEmbeddedESLint = preferences.get('useEmbeddedESLint');
+  return nodeDomain.exec('fixFile', projectRoot, fullPath, doc.getText(), useEmbeddedESLint)
     .then((response) => {
       const text = response && response.results[0] ? response.results[0].output : '';
       if (text) {
