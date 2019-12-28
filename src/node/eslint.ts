@@ -1,18 +1,20 @@
-import { CLIEngine } from 'eslint';
+import * as fs from 'fs';
+import * as path from 'path';
+import { CLIEngine, Linter } from 'eslint';
 import { CodeInspectionReport, CodeInspectionResult, CodeInspectionResultType } from '../types';
 
 export interface ESLintModule {
   CLIEngine: typeof CLIEngine;
 }
 
+interface QuadreLintReport extends CLIEngine.LintReport {
+  eslintVersion?: string;
+}
+
 const EXTENSION_NAME = 'quadre-eslint';
-const fs = require('fs');
-const path = require('path');
-const defaultCwd = process.cwd();
 const ESLINT_SEVERITY_ERROR = 2;
 const ESLINT_SEVERITY_WARNING = 1;
 
-let cli: CLIEngine | null = null;
 let currentProjectRoot: string | null = null;
 let currentProjectRootHasConfig: boolean = false;
 let erroredLastTime: boolean = true;
@@ -23,13 +25,13 @@ const log = {
   error: (...args: any[]) => console.error('[' + EXTENSION_NAME + ']', ...args)
 };
 
-function getCli(eslintPath: string, opts: CLIEngine.Options): CLIEngine | null {
+function getESLintModule(eslintPath: string): ESLintModule {
   let _realPath: string;
   try {
     _realPath = require.resolve(eslintPath);
   } catch (err) {
     log.error(`Wasn't able to resolve path to eslint: ${err.stack}`);
-    return null;
+    throw new Error(`Wasn't able to resolve path to eslint.`);
   }
 
   let _eslint: ESLintModule;
@@ -37,31 +39,17 @@ function getCli(eslintPath: string, opts: CLIEngine.Options): CLIEngine | null {
     _eslint = require(eslintPath);
   } catch (err) {
     log.error(`Wasn't able to load eslint from ${_realPath}, be sure to run 'npm install' properly: ${err.stack}`);
-    return null;
+    throw new Error(
+      `Wasn't able to load eslint from ${_realPath}, be sure to run 'npm install' properly.`
+    );
   }
 
   if (!_eslint.CLIEngine) {
     log.error(`No CLIEngine found for eslint loaded from ${_realPath}, which version are you using?`);
-    return null;
+    throw new Error(`No CLIEngine found for eslint loaded from ${_realPath}, which version are you using?`);
   }
 
-  return new _eslint.CLIEngine(opts);
-}
-
-export function refreshEslintCli(eslintPath: string | null, opts: CLIEngine.Options, allowEmbeddedEslint: boolean) {
-  if (eslintPath == null) {
-    if (allowEmbeddedEslint) {
-      eslintPath = 'eslint';
-    } else {
-      cli = null;
-      return;
-    }
-  }
-  try {
-    cli = getCli(eslintPath, opts);
-  } catch (err) {
-    log.error(err);
-  }
+  return _eslint;
 }
 
 function uniq<T>(arr: T[]): T[] {
@@ -84,37 +72,32 @@ function nodeModulesInDir(dirPath: string) {
   return path.resolve(normalizeDir(dirPath), 'node_modules');
 }
 
-export function setProjectRoot(projectRoot: string | null, prevProjectRoot: string | null, useEmbeddedESLint: boolean) {
-  // refresh when called without arguments
-  if (!projectRoot) { projectRoot = currentProjectRoot; }
+const eslintModuleMap = new Map<string, ESLintModule>();
+const eslintOptionsMap = new Map<string, CLIEngine.Options>();
 
-  const opts: CLIEngine.Options = {};
-  let eslintPath: string | null = null;
-  let rulesDirPath: string;
-  let ignorePath: string;
-  let allowEmbeddedEslint: boolean = true;
+function prepareEslintModule(
+    projectRoot: string,
+    prevProjectRoot: string | null,
+    useEmbeddedESLint: boolean): ESLintModule {
+  if (eslintModuleMap.has(projectRoot)) {
+    return eslintModuleMap.get(projectRoot)!;
+  }
 
-  if (projectRoot) {
-    // this is critical for correct .eslintrc resolution
-    opts.cwd = projectRoot;
+  try {
+    currentProjectRootHasConfig = fs.readdirSync(projectRoot).some((file: string) => {
+      return /^\.eslintrc($|\.[a-z]+$)/i.test(file);
+    });
+  } catch (err) {
+    log.warn(`Failed to read contents of ${projectRoot}: ${err}`);
+    currentProjectRootHasConfig = false;
+  }
 
-    try {
-      currentProjectRootHasConfig = fs.readdirSync(projectRoot).some((file: string) => {
-        return /^\.eslintrc($|\.[a-z]+$)/i.test(file);
-      });
-    } catch (err) {
-      log.warn(`Failed to read contents of ${projectRoot}: ${err}`);
-      currentProjectRootHasConfig = false;
-    }
+  // only allow use of embedded eslint when no configuration is present in the project
+  // or when the useEmbeddedESLint preference is set to true
+  const allowEmbeddedEslint = !currentProjectRootHasConfig || useEmbeddedESLint;
 
-    if (!currentProjectRootHasConfig) {
-      opts.baseConfig = { extends: 'eslint:recommended' };
-    }
-
-    // only allow use of embedded eslint when no configuration is present in the project
-    // or when the useEmbeddedESLint preference is set to true
-    allowEmbeddedEslint = !currentProjectRootHasConfig || useEmbeddedESLint;
-
+  let eslintPath: string | null = 'eslint';
+  if (!allowEmbeddedEslint) {
     eslintPath = projectRoot + 'node_modules/eslint';
     try {
       if (fs.statSync(eslintPath).isDirectory()) {
@@ -123,26 +106,7 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
         throw new Error('not found');
       }
     } catch (ignoreErr) {
-      eslintPath = null;
-    }
-
-    rulesDirPath = projectRoot + '.eslintrules';
-    try {
-      if (fs.statSync(rulesDirPath).isDirectory()) {
-        opts.rulePaths = [rulesDirPath];
-      }
-    } catch (ignoreErr) {
-      // no action required
-    }
-
-    ignorePath = projectRoot + '.eslintignore';
-    try {
-      if (fs.statSync(ignorePath).isFile()) {
-        opts.ignore = true;
-        opts.ignorePath = ignorePath;
-      }
-    } catch (ignoreErr) {
-      // no action required
+      // Do nothing.
     }
   }
 
@@ -159,22 +123,57 @@ export function setProjectRoot(projectRoot: string | null, prevProjectRoot: stri
   }
 
   // add current to NODE_PATH
-  if (projectRoot) {
-    nodePaths = [nodeModulesInDir(projectRoot)].concat(nodePaths);
-    process.chdir(normalizeDir(projectRoot));
-  } else {
-    process.chdir(defaultCwd);
-  }
+  nodePaths = [nodeModulesInDir(projectRoot)].concat(nodePaths);
+  process.chdir(normalizeDir(projectRoot));
 
   nodePaths = uniq(nodePaths);
   process.env.NODE_PATH = nodePaths.join(path.delimiter);
   require('module').Module._initPaths();
 
-  // console.log('ESLint NODE_PATH', process.env.NODE_PATH);
-  refreshEslintCli(eslintPath, opts, allowEmbeddedEslint);
+  const eslintModule = getESLintModule(eslintPath);
+  eslintModuleMap.set(projectRoot, eslintModule);
+  return eslintModule;
 }
 
-function mapEslintMessage(result: any, majorVersion: number): CodeInspectionResult {
+function getESlintOptions(projectRoot: string): CLIEngine.Options {
+  if (eslintOptionsMap.has(projectRoot)) {
+    return eslintOptionsMap.get(projectRoot)!;
+  }
+
+  const opts: CLIEngine.Options = {};
+  let rulesDirPath: string;
+  let ignorePath: string;
+
+  // this is critical for correct .eslintrc resolution
+  opts.cwd = projectRoot;
+
+  if (!currentProjectRootHasConfig) {
+    opts.baseConfig = { extends: 'eslint:recommended' };
+  }
+
+  rulesDirPath = projectRoot + '.eslintrules';
+  try {
+    if (fs.statSync(rulesDirPath).isDirectory()) {
+      opts.rulePaths = [rulesDirPath];
+    }
+  } catch (ignoreErr) {
+    // no action required
+  }
+
+  ignorePath = projectRoot + '.eslintignore';
+  try {
+    if (fs.statSync(ignorePath).isFile()) {
+      opts.ignore = true;
+      opts.ignorePath = ignorePath;
+    }
+  } catch (ignoreErr) {
+    // no action required
+  }
+
+  return opts;
+}
+
+function mapEslintMessage(result: Linter.LintMessage, majorVersion: number): CodeInspectionResult {
   const offset = majorVersion < 1 ? 0 : 1;
 
   let message: string;
@@ -206,13 +205,13 @@ function mapEslintMessage(result: any, majorVersion: number): CodeInspectionResu
   };
 }
 
-function createCodeInspectionReport(eslintReport: any): CodeInspectionReport {
+function createCodeInspectionReport(eslintReport: QuadreLintReport): CodeInspectionReport {
   // if version is missing, assume 1
-  const version = eslintReport.eslintVersion ? eslintReport.eslintVersion.split('.')[0] : 1;
+  const version = eslintReport.eslintVersion ? +eslintReport.eslintVersion.split('.')[0] : 1;
   const results = eslintReport.results ? eslintReport.results[0] : null;
   const messages = results ? results.messages : [];
   return {
-    errors: messages.map((x: any) => mapEslintMessage(x, version))
+    errors: messages.map((x: Linter.LintMessage) => mapEslintMessage(x, version))
   };
 }
 
@@ -231,31 +230,48 @@ export function lintFile(
   projectRoot: string, fullPath: string, text: string, useEmbeddedESLint: boolean,
   callback: (err: Error | null, res?: CodeInspectionReport) => void
 ) {
-  if (erroredLastTime || projectRoot !== currentProjectRoot) {
-    try {
-      setProjectRoot(projectRoot, currentProjectRoot, useEmbeddedESLint);
-      currentProjectRoot = projectRoot;
-      erroredLastTime = false;
-    } catch (err) {
-      log.error(`Error thrown in setProjectRoot: ${err.stack}`);
-    }
+  if (erroredLastTime) {
+    eslintModuleMap.delete(projectRoot);
+    eslintOptionsMap.delete(projectRoot);
+    erroredLastTime = false;
   }
+
+  if (projectRoot !== currentProjectRoot) {
+    if (currentProjectRoot) {
+      eslintModuleMap.delete(currentProjectRoot);
+      eslintOptionsMap.delete(currentProjectRoot);
+    }
+    currentProjectRoot = projectRoot;
+  }
+
+  let eslintModule: ESLintModule | undefined;
+  let eslintOptions: CLIEngine.Options;
+  try {
+    eslintModule = prepareEslintModule(projectRoot, currentProjectRoot, useEmbeddedESLint);
+    eslintOptions = getESlintOptions(projectRoot);
+  } catch (err) {
+    if (!eslintModule) {
+      if (currentProjectRootHasConfig) {
+        return callback(null, createUserError(
+          `ESLintError: You need to install ESLint in your project folder with 'npm install eslint'`
+        ));
+      } else {
+        return callback(null, createUserError(
+          `ESLintError: No ESLint cli is available, try reinstalling the extension`
+        ));
+      }
+    }
+    return callback(null, createUserError(err.message));
+  }
+
   if (/(\.ts|\.tsx)$/.test(fullPath) && !currentProjectRootHasConfig) {
     return callback(null, { errors: [] });
   }
-  if (cli == null) {
-    if (currentProjectRootHasConfig) {
-      return callback(null, createUserError(
-        `ESLintError: You need to install ESLint in your project folder with 'npm install eslint'`
-      ));
-    } else {
-      return callback(null, createUserError(
-        `ESLintError: No ESLint cli is available, try reinstalling the extension`
-      ));
-    }
-  }
+
+  const cli = new eslintModule.CLIEngine(eslintOptions);
+
   const relativePath = fullPath.indexOf(projectRoot) === 0 ? fullPath.substring(projectRoot.length) : fullPath;
-  let res: any;
+  let res: QuadreLintReport | undefined;
   let err: Error | null = null;
   try {
     res = cli.executeOnText(text, relativePath);
@@ -269,28 +285,38 @@ export function lintFile(
 }
 
 export function fixFile(
-  projectRoot: string, fullPath: string, text: string, callback: (err: Error | null, res?: any) => void
+  projectRoot: string, fullPath: string, text: string, useEmbeddedESLint: boolean,
+  callback: (err: Error | null, res?: QuadreLintReport) => void
 ) {
-  if (cli == null) {
-    return callback(new Error(`ESLintError: No ESLint cli is available, try reinstalling the extension`));
-  }
-  let res: any;
-  let err: Error | null = null;
-  (cli as any).options.fix = true;
+  let eslintModule: ESLintModule;
+  let eslintOptions: CLIEngine.Options;
   try {
-    process.chdir(projectRoot);
+    eslintModule = prepareEslintModule(projectRoot, currentProjectRoot, useEmbeddedESLint);
+    eslintOptions = getESlintOptions(projectRoot);
+  } catch (err) {
+    return callback(err);
+  }
+
+  const cliOptions: CLIEngine.Options = {
+    ...eslintOptions,
+    fix: true
+  };
+  const cli = new eslintModule.CLIEngine(cliOptions);
+
+  let res: QuadreLintReport | undefined;
+  let err: Error | null = null;
+  try {
     res = cli.executeOnText(text, fullPath);
     res.eslintVersion = cli.version;
   } catch (e) {
     log.error(e.stack);
     err = e;
-  } finally {
-    (cli as any).options.fix = false;
   }
   callback(err, res);
 }
 
-export function configFileModified(projectRoot, useEmbeddedESLint) {
-  setProjectRoot(projectRoot, null, useEmbeddedESLint);
+export function configFileModified(projectRoot: string, useEmbeddedESLint: boolean) {
+  eslintModuleMap.delete(projectRoot);
+  eslintOptionsMap.delete(projectRoot);
   currentProjectRoot = projectRoot;
 }
