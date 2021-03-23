@@ -1,4 +1,6 @@
-# ESLint [![Build Status](https://travis-ci.org/quadre-code/quadre-eslint.svg?branch=master)](https://travis-ci.org/quadre-code/quadre-eslint)
+# Quadre ESLint
+
+[![Build Status](https://github.com/quadre-code/quadre-eslint/actions/workflows/ci.yml/badge.svg)](https://github.com/quadre-code/quadre-eslint/actions)
 
 Quadre extension which provides file linting with ESLint.
 
