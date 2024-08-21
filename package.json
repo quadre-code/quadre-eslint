@@ -27,8 +27,8 @@
   },
   "scripts": {
     "dev": "concurrently --kill-others \"tsc --watch --project tsconfig.json\" \"tsc --watch --project src/node/tsconfig.json\"",
-    "test": "npm run prepublish",
-    "prepublish": "npm prune && npm run build && npm run lint",
+    "test": "npm prune && npm run build && npm run lint",
+    "prepublishOnly": "npm run test",
     "build": "rimraf ./dist && npm run tsc",
     "lint": "tslint -c tslint.json --project tsconfig.json && tslint -c tslint.json --project src/node/tsconfig.json",
     "tsc": "tsc --project tsconfig.json && tsc --project src/node/tsconfig.json"
