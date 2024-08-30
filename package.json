@@ -27,10 +27,12 @@
   },
   "scripts": {
     "dev": "concurrently --kill-others \"tsc --watch --project tsconfig.json\" \"tsc --watch --project src/node/tsconfig.json\"",
-    "test": "npm prune && npm run build && npm run lint",
+    "test": "npm prune && npm run build && npm run lint && npm run format-check",
     "prepublishOnly": "npm run test",
     "build": "rimraf ./dist && npm run tsc",
     "lint": "echo \"lint TBD\"",
+    "format": "prettier \"./**/*.(js|ts)\" \"!unittest-files\" --write",
+    "format-check": "prettier \"./**/*.(js|ts)\" \"!unittest-files\" --check",
     "tsc": "tsc --project tsconfig.json && tsc --project src/node/tsconfig.json"
   },
   "dependencies": {
@@ -42,6 +44,7 @@
     "@types/jquery": "^2.0.68",
     "@types/node": "20.0.0",
     "concurrently": "^8.2.2",
+    "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "typescript": "^5.5.4"
   }

@@ -28,8 +28,8 @@ define(function (require, exports, module) {
     "use strict";
 
     var SpecRunnerUtils = brackets.getModule("spec/SpecRunnerUtils"),
-        FileUtils       = brackets.getModule("file/FileUtils"),
-        Commands       = brackets.getModule("command/Commands");
+        FileUtils = brackets.getModule("file/FileUtils"),
+        Commands = brackets.getModule("command/Commands");
 
     const EXTENSION_NAME = "quadre-eslint";
     const AUTOFIX_COMMAND_ID = EXTENSION_NAME + ".autofix";
@@ -71,8 +71,8 @@ define(function (require, exports, module) {
             EditorManager = null;
             CommandManager = null;
             CodeInspection = null;
-            $             = null;
-            testWindow    = null;
+            $ = null;
+            testWindow = null;
             SpecRunnerUtils.closeTestWindow();
         });
 
@@ -110,7 +110,10 @@ define(function (require, exports, module) {
 
         it("should use inline configuration", function () {
             runs(function () {
-                waitsForDone(SpecRunnerUtils.openProjectFiles(["different-indent.js"]), "open test file");
+                waitsForDone(
+                    SpecRunnerUtils.openProjectFiles(["different-indent.js"]),
+                    "open test file"
+                );
             });
 
             runs(function () {
@@ -122,13 +125,18 @@ define(function (require, exports, module) {
         describe("autofix command", function () {
             afterEach(function () {
                 runs(function () {
-                    waitsForDone(CommandManager.execute(Commands.FILE_CLOSE, { _forceClose: true }));
+                    waitsForDone(
+                        CommandManager.execute(Commands.FILE_CLOSE, { _forceClose: true })
+                    );
                 });
             });
 
             it("should fix autofixable recommended errors", function () {
                 runs(function () {
-                    waitsForDone(SpecRunnerUtils.openProjectFiles(["fix-before.js"]), "open test file");
+                    waitsForDone(
+                        SpecRunnerUtils.openProjectFiles(["fix-before.js"]),
+                        "open test file"
+                    );
                 });
 
                 runs(function () {
@@ -144,8 +152,8 @@ define(function (require, exports, module) {
                     expect(myDocument.getText()).toEqual("var x = 5;\n");
                     myEditor = null;
                     myDocument = null;
-                })
-            })
-        })
+                });
+            });
+        });
     });
 });
