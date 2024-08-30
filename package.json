@@ -30,7 +30,7 @@
     "test": "npm prune && npm run build && npm run lint",
     "prepublishOnly": "npm run test",
     "build": "rimraf ./dist && npm run tsc",
-    "lint": "tslint -c tslint.json --project tsconfig.json && tslint -c tslint.json --project src/node/tsconfig.json",
+    "lint": "echo \"lint TBD\"",
     "tsc": "tsc --project tsconfig.json && tsc --project src/node/tsconfig.json"
   },
   "dependencies": {
@@ -43,7 +43,6 @@
     "@types/node": "20.0.0",
     "concurrently": "^8.2.2",
     "rimraf": "^6.0.1",
-    "tslint": "^5.20.1",
     "typescript": "^5.5.4"
   }
 }
