@@ -16,7 +16,7 @@ export interface CodeInspectionResult {
 }
 
 export interface CodeInspectionReport {
-    errors: CodeInspectionResult[];
+    errors: Array<CodeInspectionResult>;
 }
 
 export interface GutterOptions {

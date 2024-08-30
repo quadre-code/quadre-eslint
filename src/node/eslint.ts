@@ -20,9 +20,9 @@ let currentProjectRootHasConfig: boolean = false;
 let erroredLastTime: boolean = true;
 
 const log = {
-    info: (...args: any[]) => console.log("[" + EXTENSION_NAME + "]", ...args),
-    warn: (...args: any[]) => console.warn("[" + EXTENSION_NAME + "]", ...args),
-    error: (...args: any[]) => console.error("[" + EXTENSION_NAME + "]", ...args),
+    info: (...args: Array<any>): void => console.log("[" + EXTENSION_NAME + "]", ...args),
+    warn: (...args: Array<any>): void => console.warn("[" + EXTENSION_NAME + "]", ...args),
+    error: (...args: Array<any>): void => console.error("[" + EXTENSION_NAME + "]", ...args),
 };
 
 function getESLintModule(eslintPath: string): ESLintModule {
@@ -31,7 +31,7 @@ function getESLintModule(eslintPath: string): ESLintModule {
         _realPath = require.resolve(eslintPath);
     } catch (err) {
         log.error(`Wasn't able to resolve path to eslint: ${err.stack}`);
-        throw new Error(`Wasn't able to resolve path to eslint.`);
+        throw new Error("Wasn't able to resolve path to eslint.");
     }
 
     let _eslint: ESLintModule;
@@ -58,8 +58,8 @@ function getESLintModule(eslintPath: string): ESLintModule {
     return _eslint;
 }
 
-function uniq<T>(arr: T[]): T[] {
-    return arr.reduce((result: T[], item: T) => {
+function uniq<T>(arr: Array<T>): Array<T> {
+    return arr.reduce((result: Array<T>, item: T) => {
         if (result.indexOf(item) === -1) {
             result.push(item);
         }
@@ -67,14 +67,14 @@ function uniq<T>(arr: T[]): T[] {
     }, []);
 }
 
-function normalizeDir(dirPath: string) {
+function normalizeDir(dirPath: string): string {
     if (dirPath.match(/(\\|\/)$/)) {
         dirPath = dirPath.slice(0, -1);
     }
     return process.platform === "win32" ? dirPath.replace(/\//g, "\\") : dirPath;
 }
 
-function nodeModulesInDir(dirPath: string) {
+function nodeModulesInDir(dirPath: string): string {
     return path.resolve(normalizeDir(dirPath), "node_modules");
 }
 
@@ -148,8 +148,6 @@ function getESlintOptions(projectRoot: string): CLIEngine.Options {
     }
 
     const opts: CLIEngine.Options = {};
-    let rulesDirPath: string;
-    let ignorePath: string;
 
     // this is critical for correct .eslintrc resolution
     opts.cwd = projectRoot;
@@ -158,7 +156,7 @@ function getESlintOptions(projectRoot: string): CLIEngine.Options {
         opts.baseConfig = { extends: "eslint:recommended" };
     }
 
-    rulesDirPath = projectRoot + ".eslintrules";
+    const rulesDirPath = projectRoot + ".eslintrules";
     try {
         if (fs.statSync(rulesDirPath).isDirectory()) {
             opts.rulePaths = [rulesDirPath];
@@ -167,7 +165,7 @@ function getESlintOptions(projectRoot: string): CLIEngine.Options {
         // no action required
     }
 
-    ignorePath = projectRoot + ".eslintignore";
+    const ignorePath = projectRoot + ".eslintignore";
     try {
         if (fs.statSync(ignorePath).isFile()) {
             opts.ignore = true;
@@ -243,7 +241,7 @@ export function lintFile(
     text: string,
     useEmbeddedESLint: boolean,
     callback: (err: Error | null, res?: CodeInspectionReport) => void
-) {
+): void {
     if (erroredLastTime) {
         eslintModuleMap.delete(projectRoot);
         eslintOptionsMap.delete(projectRoot);
@@ -269,17 +267,17 @@ export function lintFile(
                 return callback(
                     null,
                     createUserError(
-                        `ESLintError: You need to install ESLint in your project folder with 'npm install eslint'`
-                    )
-                );
-            } else {
-                return callback(
-                    null,
-                    createUserError(
-                        `ESLintError: No ESLint cli is available, try reinstalling the extension`
+                        "ESLintError: You need to install ESLint in your project folder with 'npm install eslint'"
                     )
                 );
             }
+
+            return callback(
+                null,
+                createUserError(
+                    "ESLintError: No ESLint cli is available, try reinstalling the extension"
+                )
+            );
         }
         return callback(null, createUserError(err.message));
     }
@@ -311,7 +309,7 @@ export function fixFile(
     text: string,
     useEmbeddedESLint: boolean,
     callback: (err: Error | null, res?: QuadreLintReport) => void
-) {
+): void {
     let eslintModule: ESLintModule;
     let eslintOptions: CLIEngine.Options;
     try {
@@ -339,7 +337,7 @@ export function fixFile(
     callback(err, res);
 }
 
-export function configFileModified(projectRoot: string, useEmbeddedESLint: boolean) {
+export function configFileModified(projectRoot: string, useEmbeddedESLint: boolean): void {
     eslintModuleMap.delete(projectRoot);
     eslintOptionsMap.delete(projectRoot);
     currentProjectRoot = projectRoot;

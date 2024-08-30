@@ -5,7 +5,7 @@ const domainName = EXTENSION_NAME;
 
 let domainManager: any;
 
-exports.init = (_domainManager: any) => {
+exports.init = (_domainManager: any): void => {
     domainManager = _domainManager;
 
     if (!domainManager.hasDomain(domainName)) {

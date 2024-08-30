@@ -57,7 +57,7 @@ function handleLintAsync(text: string, fullPath: string): JQueryPromise<CodeInsp
                     preferences.get("gutterMarks", projectRoot)
                 );
             } else {
-                log.error(`No bracketsInspectionGutters found on window, gutters disabled.`);
+                log.error("No bracketsInspectionGutters found on window, gutters disabled.");
             }
             deferred.resolve(report);
         },
@@ -68,7 +68,7 @@ function handleLintAsync(text: string, fullPath: string): JQueryPromise<CodeInsp
     return deferred.promise();
 }
 
-function handleAutoFix() {
+function handleAutoFix(): void {
     const doc = DocumentManager.getCurrentDocument();
     const language = doc.getLanguage();
     const fileType = language.getId();
@@ -84,7 +84,7 @@ function handleAutoFix() {
 
     const projectRoot = ProjectManager.getProjectRoot().fullPath;
     const useEmbeddedESLint = preferences.get("useEmbeddedESLint");
-    return nodeDomain.exec("fixFile", projectRoot, fullPath, doc.getText(), useEmbeddedESLint).then(
+    nodeDomain.exec("fixFile", projectRoot, fullPath, doc.getText(), useEmbeddedESLint).then(
         (response) => {
             const text = response && response.results[0] ? response.results[0].output : "";
             if (text) {

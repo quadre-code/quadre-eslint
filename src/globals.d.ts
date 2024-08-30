@@ -1,2 +1,2 @@
-declare var brackets: any;
-declare var define: any;
+declare let brackets: any;
+declare let define: any;
