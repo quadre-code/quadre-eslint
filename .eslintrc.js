@@ -36,6 +36,11 @@ module.exports = {
             excludedFiles: "**/*.js",
             rules: {
                 "@typescript-eslint/naming-convention": "off",
+                "no-shadow": "off",
+                "@typescript-eslint/no-shadow": "warn",
+                "no-dupe-class-members": "off",
+                "no-redeclare": "off",
+                "@typescript-eslint/no-redeclare": "error",
             },
         },
         // node files

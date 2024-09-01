@@ -1,14 +1,33 @@
 import * as fs from "fs";
 import * as path from "path";
-import { CLIEngine, Linter } from "eslint";
+import * as ESLintEmbeddedModule from "eslint";
+import type * as ESLint6 from "eslint6";
+import type * as ESLint8 from "eslint8";
 import { CodeInspectionReport, CodeInspectionResult, CodeInspectionResultType } from "../types";
 
-export interface ESLintModule {
-    CLIEngine: typeof CLIEngine;
+type ESLintModule = typeof ESLintEmbeddedModule | typeof ESLint6 | typeof ESLint8;
+
+type ESLintOptions =
+    | ESLintEmbeddedModule.ESLint.Options
+    | ESLint6.CLIEngine.Options
+    | ESLint8.ESLint.Options;
+
+interface QuadreLintReport {
+    eslintVersion?: string;
+    results: Array<QuadreLintResult>;
 }
 
-interface QuadreLintReport extends CLIEngine.LintReport {
-    eslintVersion?: string;
+interface QuadreLintResult {
+    output?: string | undefined;
+    messages: Array<QuadreLintMessage>;
+}
+
+interface QuadreLintMessage {
+    severity: 0 | 1 | 2;
+    message: string;
+    ruleId: string | null;
+    line: number;
+    column: number;
 }
 
 const EXTENSION_NAME = "quadre-eslint";
@@ -24,6 +43,14 @@ const log = {
     warn: (...args: Array<any>): void => console.warn("[" + EXTENSION_NAME + "]", ...args),
     error: (...args: Array<any>): void => console.error("[" + EXTENSION_NAME + "]", ...args),
 };
+
+function isELint6(value: ESLintModule): value is typeof ESLint6 {
+    return !!(value as typeof ESLint6).CLIEngine;
+}
+
+function isELint8(value: ESLintModule): value is typeof ESLint8 {
+    return !(value as typeof ESLint6).CLIEngine && !!(value as typeof ESLint8).ESLint;
+}
 
 function getESLintModule(eslintPath: string): ESLintModule {
     let _realPath: string;
@@ -46,12 +73,12 @@ function getESLintModule(eslintPath: string): ESLintModule {
         );
     }
 
-    if (!_eslint.CLIEngine) {
+    if (!(_eslint as typeof ESLint6).CLIEngine && !(_eslint as typeof ESLint8).ESLint) {
         log.error(
-            `No CLIEngine found for eslint loaded from ${_realPath}, which version are you using?`
+            `No CLIEngine or ESLint classes found for eslint loaded from ${_realPath}, which version are you using?`
         );
         throw new Error(
-            `No CLIEngine found for eslint loaded from ${_realPath}, which version are you using?`
+            `No CLIEngine or ESLint classes found for eslint loaded from ${_realPath}, which version are you using?`
         );
     }
 
@@ -79,7 +106,7 @@ function nodeModulesInDir(dirPath: string): string {
 }
 
 const eslintModuleMap = new Map<string, ESLintModule>();
-const eslintOptionsMap = new Map<string, CLIEngine.Options>();
+const eslintOptionsMap = new Map<string, ESLintOptions>();
 
 function prepareEslintModule(
     projectRoot: string,
@@ -142,12 +169,12 @@ function prepareEslintModule(
     return eslintModule;
 }
 
-function getESlintOptions(projectRoot: string): CLIEngine.Options {
+function getESlintOptions(projectRoot: string): ESLintOptions {
     if (eslintOptionsMap.has(projectRoot)) {
         return eslintOptionsMap.get(projectRoot)!;
     }
 
-    const opts: CLIEngine.Options = {};
+    const opts: ESLintOptions = {};
 
     // this is critical for correct .eslintrc resolution
     opts.cwd = projectRoot;
@@ -178,7 +205,63 @@ function getESlintOptions(projectRoot: string): CLIEngine.Options {
     return opts;
 }
 
-function mapEslintMessage(result: Linter.LintMessage, majorVersion: number): CodeInspectionResult {
+function mapToQuadreLintReport(eslintModule: typeof ESLint6, data: ESLint6.CLIEngine.LintReport);
+function mapToQuadreLintReport(
+    eslintModule: typeof ESLint8,
+    data: Array<ESLint8.ESLint.LintResult>
+);
+function mapToQuadreLintReport(
+    eslintModule: ESLintModule,
+    data: ESLint6.CLIEngine.LintReport | Array<ESLint8.ESLint.LintResult>
+): QuadreLintReport {
+    if (isELint6(eslintModule)) {
+        const lintReport = data as ESLint6.CLIEngine.LintReport;
+        const result: QuadreLintReport = {
+            eslintVersion: eslintModule.CLIEngine.version,
+            results: lintReport.results.map(
+                (r) =>
+                    ({
+                        output: r.output,
+                        messages: r.messages.map(
+                            (m) =>
+                                ({
+                                    severity: m.severity,
+                                    message: m.message,
+                                    ruleId: m.ruleId,
+                                    line: m.line,
+                                    column: m.column,
+                                }) satisfies QuadreLintMessage
+                        ),
+                    }) satisfies QuadreLintResult
+            ),
+        };
+        return result;
+    }
+
+    const lintResults = data as Array<ESLint8.ESLint.LintResult>;
+    const result: QuadreLintReport = {
+        eslintVersion: eslintModule.ESLint.version,
+        results: lintResults.map(
+            (r) =>
+                ({
+                    output: r.output,
+                    messages: r.messages.map(
+                        (m) =>
+                            ({
+                                severity: m.severity,
+                                message: m.message,
+                                ruleId: m.ruleId,
+                                line: m.line,
+                                column: m.column,
+                            }) satisfies QuadreLintMessage
+                    ),
+                }) satisfies QuadreLintResult
+        ),
+    };
+    return result;
+}
+
+function mapEslintMessage(result: QuadreLintMessage, majorVersion: number): CodeInspectionResult {
     const offset = majorVersion < 1 ? 0 : 1;
 
     let message: string;
@@ -218,7 +301,7 @@ function createCodeInspectionReport(eslintReport: QuadreLintReport): CodeInspect
     const results = eslintReport.results ? eslintReport.results[0] : null;
     const messages = results ? results.messages : [];
     return {
-        errors: messages.map((x: Linter.LintMessage) => mapEslintMessage(x, version)),
+        errors: messages.map((x) => mapEslintMessage(x, version)),
     };
 }
 
@@ -257,7 +340,7 @@ export function lintFile(
     }
 
     let eslintModule: ESLintModule | undefined;
-    let eslintOptions: CLIEngine.Options;
+    let eslintOptions: ESLintOptions;
     try {
         eslintModule = prepareEslintModule(projectRoot, currentProjectRoot, useEmbeddedESLint);
         eslintOptions = getESlintOptions(projectRoot);
@@ -286,21 +369,43 @@ export function lintFile(
         return callback(null, { errors: [] });
     }
 
-    const cli = new eslintModule.CLIEngine(eslintOptions);
+    if (isELint6(eslintModule)) {
+        const cli = new eslintModule.CLIEngine(eslintOptions as ESLint6.CLIEngine.Options);
 
-    const relativePath =
-        fullPath.indexOf(projectRoot) === 0 ? fullPath.substring(projectRoot.length) : fullPath;
-    let res: QuadreLintReport | undefined;
-    let err: Error | null = null;
-    try {
-        res = cli.executeOnText(text, relativePath);
-        res.eslintVersion = cli.version;
-    } catch (e) {
-        log.error(`Error thrown in executeOnText: ${e.stack}`);
-        err = e;
-        erroredLastTime = true;
+        const relativePath =
+            fullPath.indexOf(projectRoot) === 0 ? fullPath.substring(projectRoot.length) : fullPath;
+        let res: QuadreLintReport | undefined;
+        let err: Error | null = null;
+        try {
+            const lintReport = cli.executeOnText(text, relativePath);
+            res = mapToQuadreLintReport(eslintModule, lintReport);
+        } catch (e) {
+            log.error(`Error thrown in executeOnText: ${e.stack}`);
+            err = e;
+            erroredLastTime = true;
+        }
+        return callback(err, res ? createCodeInspectionReport(res) : void 0);
     }
-    return callback(err, res ? createCodeInspectionReport(res) : void 0);
+
+    if (isELint8(eslintModule)) {
+        const cli = new eslintModule.ESLint(eslintOptions as ESLint8.ESLint.Options);
+
+        const relativePath =
+            fullPath.indexOf(projectRoot) === 0 ? fullPath.substring(projectRoot.length) : fullPath;
+        let res: QuadreLintReport | undefined;
+        let err: Error | null = null;
+        cli.lintText(text, { filePath: relativePath })
+            .then((lintResult) => {
+                res = mapToQuadreLintReport(eslintModule, lintResult);
+                return callback(null, res ? createCodeInspectionReport(res) : void 0);
+            })
+            .catch((e) => {
+                log.error(`Error thrown in executeOnText: ${e.stack}`);
+                err = e;
+                erroredLastTime = true;
+                return callback(err, void 0);
+            });
+    }
 }
 
 export function fixFile(
@@ -311,7 +416,7 @@ export function fixFile(
     callback: (err: Error | null, res?: QuadreLintReport) => void
 ): void {
     let eslintModule: ESLintModule;
-    let eslintOptions: CLIEngine.Options;
+    let eslintOptions: ESLintOptions;
     try {
         eslintModule = prepareEslintModule(projectRoot, currentProjectRoot, useEmbeddedESLint);
         eslintOptions = getESlintOptions(projectRoot);
@@ -319,22 +424,42 @@ export function fixFile(
         return callback(err);
     }
 
-    const cliOptions: CLIEngine.Options = {
-        ...eslintOptions,
-        fix: true,
-    };
-    const cli = new eslintModule.CLIEngine(cliOptions);
+    if (isELint6(eslintModule)) {
+        const cliOptions: ESLint6.CLIEngine.Options = {
+            ...(eslintOptions as ESLint6.CLIEngine.Options),
+            fix: true,
+        };
+        const cli = new eslintModule.CLIEngine(cliOptions);
 
-    let res: QuadreLintReport | undefined;
-    let err: Error | null = null;
-    try {
-        res = cli.executeOnText(text, fullPath);
-        res.eslintVersion = cli.version;
-    } catch (e) {
-        log.error(e.stack);
-        err = e;
+        let res: QuadreLintReport | undefined;
+        let err: Error | null = null;
+        try {
+            const lintReport = cli.executeOnText(text, fullPath);
+            res = mapToQuadreLintReport(eslintModule, lintReport);
+        } catch (e) {
+            log.error(e.stack);
+            err = e;
+        }
+        callback(err, res);
+    } else if (isELint8(eslintModule)) {
+        const cliOptions: ESLint8.ESLint.Options = {
+            ...(eslintOptions as ESLint8.ESLint.Options),
+            fix: true,
+        };
+        const cli = new eslintModule.ESLint(cliOptions);
+
+        let res: QuadreLintReport | undefined;
+        let err: Error | null = null;
+        cli.lintText(text, { filePath: fullPath })
+            .then((lintResult) => {
+                res = mapToQuadreLintReport(eslintModule, lintResult);
+            })
+            .catch((e) => {
+                log.error(e.stack);
+                err = e;
+                callback(err, res);
+            });
     }
-    callback(err, res);
 }
 
 export function configFileModified(projectRoot: string, useEmbeddedESLint: boolean): void {

@@ -48,6 +48,8 @@
     "concurrently": "^8.2.2",
     "eslint-config-moody-tsx": "^2.1.0",
     "eslint-plugin-react": "^7.35.0",
+    "eslint6": "npm:@types/eslint@^6.8.1",
+    "eslint8": "npm:@types/eslint@^8.56.12",
     "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "typescript": "^5.5.4"
